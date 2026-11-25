@@ -1,0 +1,124 @@
+protocol_version: p1_sparse_selector_d1_v4
+role: sbp_centred_sparse_selector_calibration_and_two_bank_validation_not_atlas_admission
+status: development_only
+coherent_core_gamma: 1.0
+protocol_document: documents/P1-sparse-selector-D1-v4-protocol.md
+output_root: outputs/p1_sparse_selector_d1_v4_run2
+# Run 1 (outputs/p1_sparse_selector_d1_v4) was withdrawn before any certificate: its code built and screened
+# the validation banks' observation tables before the budget was fixed. Run 2 opens them only after the
+# budget and uses fresh validation banks; the run-1 validation banks are listed under withdrawn_banks.
+# T1 resumed 2026-11-21 (user decisions): after D1-v7, with the shared branch-pair estimator (SBP) as the
+# body centre instead of Model A, and the ilgc_v1_2 selector proposals. The D1-v3 design (64 eligible
+# calibration blocks, alpha 0.02, two unpooled 32-block validation banks, the same gates) is kept;
+# what changes is the centre, the bodies, the selector proposals, and the support screen.
+
+design_source:
+  development_config: p3_d1_v7.yaml        # estimator and screen sections must be identical
+
+ilgc_targets:
+  operational_config: p1_ilgc_operational_r4.yaml
+
+estimator:
+  method: shared_branch_pair_v1
+  starts: 32
+  seed: 0
+  probability_floor: 1.0e-6
+  likelihood_floor: 1.0e-12
+  near_optimal_nats: 1.0
+  max_iterations: 4000
+  pair_observability_threshold: 0.05
+
+screen:
+  method: support_identifiability_screen_v1
+  pauli_commutant: true
+  disconnected_branch_null_tail_epsilon: 1.0e-6
+
+bodies:
+  # Read-only use of the frozen S3 calibration (low = P1 sparse_information); never recomputed here.
+  source_artifact: outputs/p3_s3_calibration/p3_s3_calibration.json
+  source_artifact_sha256: 2144a7c4cb2d321026f05c7a9b29022eb69f2f49e6cd42de22ea46d74e4673fb
+  calibration_hash: c4f61ad444ce3eaeec5bb15382ba171dff9edea94c16770ba3bac7dff4470d7f
+  deficit: low
+
+certificate:
+  existence: bi_only_with_registry          # BI primal_verified implies Q primal_verified (F_BI is inside F_Q)
+  precision_dps: 80
+  proposal_backends: [CLARABEL]
+  selector:
+    formulation: ilgc_v1_2
+    precision_dps: 80
+    kernel: {backends: [CLARABEL], body_guard: 1.0e-5, kernel_reduction: true}
+    congruence:
+      body_guard: 1.0e-5
+      routes:
+        - {backend: CLARABEL, constraint_guard: 1.0e-2}
+        - {backend: CLARABEL_refine, constraint_guard: 1.0e-2}
+        - {backend: CLARABEL_refine, constraint_guard: 1.0e-3}
+    lower_bound: {joint_backends: [CLARABEL], fixed_direction_backends: [CLARABEL, CLARABEL_refine]}
+  rdn: report_only                         # rdn_v1 with the energy-pinched refutation candidates, as in D1-v7
+
+selector_calibration:
+  bank:
+    bank_id: p1_sparse_d1_v4_selector_calibration
+    seed: 54127
+    block_count: 80
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54227
+  eligible: screened_in_and_bi_primal_verified_and_selector_bounds_verified
+  population: first_eligible_blocks_in_ascending_block_index
+  eligible_block_count: 64
+  alpha: 0.02                               # order index ceil(65 * 0.98) = 64 of 64 (the maximum)
+  budget_inflation: 1.000001
+  scientific_error_ceiling: 0.05            # also the selector budget passed while calibrating
+
+validation_gate:                            # per bank, unpooled; D1-v3 gates without the Q and worker stages
+  minimum_bi_primal_records: 24
+  pi_sel_lcb_alpha: 0.05                    # one-sided Wilson, denominator = BI primal_verified records
+  pi_sel_lcb_floor: 0.80
+  bi_gap_rate_ceiling: 0.10                 # among screened-in records
+  stagewise_numerical_abstention_limits: {bi: 0.05, sel: 0.05}
+
+validation_banks:
+  D_val_A:
+    bank_id: p1_sparse_d1_v4_validation_a_run2
+    seed: 54130
+    block_count: 32
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54230
+  D_val_B:
+    bank_id: p1_sparse_d1_v4_validation_b_run2
+    seed: 54131
+    block_count: 32
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54231
+
+withdrawn_banks:   # support tables generated in withdrawn run 1; never reuse (checked at declaration)
+  run1_D_val_A:
+    bank_id: p1_sparse_d1_v4_validation_a
+    seed: 54128
+    block_count: 32
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54228
+  run1_D_val_B:
+    bank_id: p1_sparse_d1_v4_validation_b
+    seed: 54129
+    block_count: 32
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54229
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+  built: false
+  opened: false
+
+workers: 6

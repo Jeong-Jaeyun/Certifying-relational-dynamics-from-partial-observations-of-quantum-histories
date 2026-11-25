@@ -1,0 +1,65 @@
+dimensions:
+  d_C: 8
+  d_S: 4
+  d_CS: 32
+  clock_qubits: 3
+  system_qubits: 2
+  K: 8
+declared_clock:
+  clock_qubits: [0, 1, 2]
+  system_qubits: [3, 4]
+active_modes: [0, 1, 3]
+omega: [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
+construction_grid:
+  coefficient_profiles:
+    - label: balanced
+      probabilities: [0.3333333333333333, 0.3333333333333333, 0.3333333333333333]
+    - label: front_loaded
+      probabilities: [0.5, 0.3, 0.2]
+    - label: back_loaded
+      probabilities: [0.2, 0.35, 0.45]
+  phase_profiles:
+    - label: zero
+      phases: [0.0, 0.0, 0.0]
+    - label: mild
+      phases: [0.0, 0.6283185307179586, 1.2566370614359172]
+    - label: third_turn
+      phases: [0.0, 1.0471975511965976, 2.0943951023931953]
+  system_unitaries:
+    - label: identity
+      kind: identity
+    - label: h0
+      kind: h0
+    - label: cnot_h0
+      kind: cnot_h0
+    - label: cnot_ry
+      kind: cnot_ry
+      alpha: 0.6283185307179586
+      beta: 1.0471975511965976
+thresholds:
+  eps_num: 1.0e-8
+  c_mode: 0.15
+  theta_con: 1.0e-6
+stage_a:
+  candidate_clocks:
+    - label: declared_012_34
+      clock_qubits: [0, 1, 2]
+      system_qubits: [3, 4]
+    - label: permuted_013_24
+      clock_qubits: [0, 1, 3]
+      system_qubits: [2, 4]
+    - label: permuted_023_14
+      clock_qubits: [0, 2, 3]
+      system_qubits: [1, 4]
+    - label: permuted_123_04
+      clock_qubits: [1, 2, 3]
+      system_qubits: [0, 4]
+  thresholds:
+    theta_clock_supp: 0.02
+    theta_res_fidelity: 0.02
+    theta_res_laplacian: 0.0
+    theta_pred_fidelity: 2.0
+    theta_concat_fidelity: 2.0
+    theta_pred_laplacian: 2.0
+    theta_concat_laplacian: 2.0
+    sigma_floor: 1.0e-6

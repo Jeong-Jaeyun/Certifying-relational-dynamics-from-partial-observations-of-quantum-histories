@@ -1,0 +1,96 @@
+artifact: m1_e3_rules
+status: development_only
+coherent_core_gamma: 1.0
+protocol_document: documents/M1-E3-rule-comparison-protocol.md
+output_root: outputs/m1_e3_rules
+# E3 (plan §4): support-only rules for the single added D context, compared on a NEW development bank with
+# every candidate fitted, so that every rule's error is available on the same records. Development only;
+# a rule's superiority would need its own sealed comparison. The declared carry-forward rule decides which
+# rule the (undeclared) E1 preregistration uses.
+
+design_source:
+  development_config: p3_d1_v7.yaml        # estimator and screen must be identical
+  dev_inputs:
+    outputs/m1_added_measurement/m1_added_measurement.json: bb61f9c6f6fc20d20cb3a783a890d514a8f8f71f6b648d9b4857fb7070d3b776
+    outputs/m1_added_measurement_posthoc/m1_added_measurement_posthoc.json: 46ae1d70d79ebef7c74c819c227ad3057694d53da9424c5b1a5d40c3d8616909
+
+ilgc_targets:
+  operational_config: p1_ilgc_operational_r4.yaml
+
+estimator:
+  method: shared_branch_pair_v1
+  starts: 32
+  seed: 0
+  probability_floor: 1.0e-6
+  likelihood_floor: 1.0e-12
+  near_optimal_nats: 1.0
+  max_iterations: 4000
+  pair_observability_threshold: 0.05
+
+screen:
+  method: support_identifiability_screen_v1
+  pauli_commutant: true
+  disconnected_branch_null_tail_epsilon: 1.0e-6
+
+deficit: low
+
+bank:
+  bank_id: m1_e3_rules_v1
+  seed: 56201
+  block_count: 8192                 # generation cap
+  dirichlet_concentration: 8.0
+  minimum_mode_probability: 0.15
+  phase_range: [0.0, 6.283185307179586]
+  observation_seed: 56202
+  mask_seed: 56203
+  mask_population: d_mask_commutant_low_masks
+  quotas: {3a: 512, 3b: 128}
+  exact_class_tolerance: 1.0e-10
+
+added_context:
+  n_shot: 2048
+  candidates: unobserved_input_D_anticommuting_with_R
+  tie_relative_tolerance: 1.0e-12   # ties go to the fixed order
+  random_rule_seed: 56205
+
+control:
+  extra_shots_per_support_context: 256   # drawn (as in M1) for seed compatibility; not fitted here
+
+rules:
+  s_Q: max_orbit_invariant_sensitivity_at_A0_fit           # the current rule (reference)
+  sigma_min: max_sigma_min_of_orbit_coefficient_matrix_at_A0_fit
+  sigma_min_chi: max_fisher_whitened_sigma_min_at_A0_fit    # noise-normalized separation
+  local: max_local_tangent_at_A0_fit                         # 2||b|| at the fitted point (local, not orbit-invariant)
+  fixed: first_in_sorted_context_id_order
+  random: uniform_random_candidate_seeded_per_record
+  oracle: max_truth_smin_rel_with_context_added              # truth-based diagnostic
+  hindsight: min_error_on_E_all                              # unattainable reference
+
+evaluation:
+  primary_class: diag
+  pairwise_set: all_contexts_minus_support_minus_both_picks
+  all_candidates_set: all_contexts_minus_support_minus_every_candidate
+  statistic: {name: cvar, level: 0.9, tail_count: ceil_of_0.1_n}
+  bootstrap: {resamples: 10000, seed: 56204, interval: [0.025, 0.975], pairing: same_record_indices}
+  large_failure_threshold_own_diag: 0.1
+  near_degenerate: two_sigma_min_truth_below_shot_noise
+
+comparisons:                         # CVaR(first) - CVaR(second), 3a, diag, pairwise set
+  - [fixed, s_Q]
+  - [sigma_min, s_Q]
+  - [sigma_min_chi, s_Q]
+  - [random, s_Q]
+  - [local, s_Q]
+  - [s_Q, oracle]
+  - [sigma_min_chi, sigma_min]
+
+carry_forward:
+  default: s_Q
+  challengers: [sigma_min, sigma_min_chi]
+  replace_if: cvar_s_Q_minus_challenger_interval_above_zero   # challenger strictly lower tail on 3a
+  both_qualify: larger_point_difference
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+
+workers: 6

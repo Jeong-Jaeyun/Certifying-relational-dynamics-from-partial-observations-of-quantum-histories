@@ -1,0 +1,61 @@
+artifact: g_guard
+status: development_only
+protocol_document: documents/G-guard-protocol.md
+output_root: outputs/g_guard
+# Support goodness-of-fit abstention guard for the certification route (user decision 2026-11-23), after
+# the E5 pilot showed that a misspecified (decohered) truth keeps a correct RDN verdict but voids its
+# calibrated justification. Two declared stages on two new development banks: calibrate the threshold on
+# pure histories, then evaluate the frozen guard on independent controlled truths.
+
+design_source:
+  development_config: p3_d1_v7.yaml        # estimator, screen and certificate settings
+  dev_inputs:
+    outputs/e5_rdn_specificity/e5_rdn_specificity.json: 05d0acd4f0c68609485ce6cf17b29daecb88f08c09c76e9df5b708dbe3612799
+    outputs/p3_s3_calibration/p3_s3_calibration.json: 2144a7c4cb2d321026f05c7a9b29022eb69f2f49e6cd42de22ea46d74e4673fb
+
+statistic:
+  name: support_G                           # 2 sum_{support cells} n p_hat log(p_hat / q_fit), fitted table in the SBP output convention
+  alpha: 0.05                               # target false-abstention rate on pure histories, per stratum
+  threshold: split_conformal_order_statistic   # k = ceil((n+1)(1-alpha)) of the calibration G values
+
+strata: [medium, low]
+masks: s3_rule                              # support_contexts_for_deficit, seed key p3v2:{bank_id}:{deficit}:{i}
+
+calibration:
+  per_stratum: 320                          # first screened-in pure records in index order
+  bank:
+    bank_id: g_guard_calibration_v1
+    seed: 56301
+    observation_seed: 56302
+    haar_seed: 56303
+    block_count: 340                        # cap; a shortfall is reported
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+
+evaluation:
+  bank:
+    bank_id: g_guard_evaluation_v1
+    seed: 56311
+    observation_seed: 56312
+    haar_seed: 56313
+    block_count: 64
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+  families: [pure, dephased_0.1, dephased_0.25, dephased_0.5, readout_0.02, readout_0.05, tau_flat, registry_violating]
+  misspecified: [dephased_0.1, dephased_0.25, dephased_0.5, readout_0.02, readout_0.05]
+  certify: screened_in_and_guard_pass      # full S3 route (BI + rdn_v1) only where the guarded route would speak
+
+endpoints:
+  G1_false_abstention_pure: {statistic: abstentions_among_screened_in_pure, consistent_if: clopper_pearson_95_lower_at_most_alpha}
+  G2_detection: {statistic: abstentions_among_screened_in_per_family, report: clopper_pearson_95}
+  G3_validity: {statistic: joint_truth_coverage_among_guarded_rdn_certified, target: 0.90, min_records: 20, per: family}
+  G4_static: {statistic: certified_static_records, expected: 0}
+  G5_registry: {statistic: bi_refutations_registry_violating, report: true}
+  G6_cost: {statistic: guarded_s3_success_pure, report: true}
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+
+workers: 6

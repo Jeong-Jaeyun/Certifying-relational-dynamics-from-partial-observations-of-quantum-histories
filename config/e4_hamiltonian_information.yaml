@@ -1,0 +1,72 @@
+artifact: e4_hamiltonian_information
+stage: e4
+status: development_only
+protocol_document: documents/E4-hamiltonian-information-protocol.md
+output_root: outputs/e4_hamiltonian_information
+# E4: what the registered Hamiltonian contributes, at which tolerance, and what a wrong Hamiltonian costs, on
+# the type-3a records of the registered law (the population where information level ii mattered in development).
+
+design_source:
+  development_config: p3_d1_v7.yaml
+  dev_inputs:
+    outputs/m1_added_measurement_posthoc/m1_added_measurement_h_known.json: 13caa7281fdd2e6ee9a4ed367906ed819636f619b3c0da74a79c9a197eb8b889
+    outputs/m1_evidence_package/m1_evidence_package.json: 97b0fe29a86abe2fdbd68ada40fee0e3bb8e1a0566f33efc54b5df85f258737b
+
+estimator:
+  method: shared_branch_pair_v1
+  starts: 32
+  seed: 0
+  probability_floor: 1.0e-6
+  likelihood_floor: 1.0e-12
+  near_optimal_nats: 1.0
+  max_iterations: 4000
+  pair_observability_threshold: 0.05
+
+bank:                                       # registered law; flagged low masks; enriched screened-in type 3a
+  bank_id: e4_h_information_v1
+  seed: 56901
+  observation_seed: 56902
+  mask_seed: 56903
+  block_count: 2048                         # generation cap
+  quota: 128
+  dirichlet_concentration: 8.0
+  minimum_mode_probability: 0.15
+  phase_range: [0.0, 6.283185307179586]
+
+arms:
+  kernel_starts: 8                          # exact zero-energy kernel fits (random starts in the kernel)
+  soft_thetas: [1.0e-6, 1.0e-4, 1.0e-3, 1.0e-2, 1.0e-1]
+  soft_extra_starts: 2                      # besides the level-ii and level-i optima
+  rotation_deltas: [0.01, 0.03, 0.1]        # registry eigenbasis U -> exp(i delta G) U, ||G||_op = 1
+  eigenvalue_shifts: [0.01]                 # active system eigenvalues shifted by (+eps, -eps, +eps)
+  eigen_soft_theta: 1.0e-3
+
+added_context:
+  n_shot: 2048
+  primary_rule: max_s_Q_at_support_only_fit
+  tie_relative_tolerance: 1.0e-12
+control:
+  extra_shots_per_support_context: 256
+
+certificate:
+  records: 64                               # the first 64 records: H_exact, H_rot_delta and A0, each with its own registry
+  precision_dps: 80
+  proposal_backends: [CLARABEL]
+  refine_unresolved_with_optimal_classical_state: true
+
+evaluation:
+  primary_class: diag
+  common_set: all_contexts_minus_support_minus_Qs
+  level: 0.9
+  bootstrap: {resamples: 10000, seed: 56904, interval: [0.025, 0.975]}
+
+endpoints:
+  H1_levels: {report: [cvar, coverage, orbit_angle] , arms: [A0, H_exact, A_s, H_exact_added]}
+  H2_tolerance: {report: [cvar, coverage, orbit_angle, arc_half_width], arms: soft_thetas}
+  H3_rotation: {report: [truth_energy_under_registry, nll_minus_A0, cvar, coverage, bi_status], arms: rotation_deltas}
+  H4_spectrum: {report: [kernel_dimension, soft_arm_cvar_and_coverage], arms: eigenvalue_shifts}
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+
+workers: 6

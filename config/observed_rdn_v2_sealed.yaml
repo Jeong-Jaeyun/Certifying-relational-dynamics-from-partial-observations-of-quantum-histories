@@ -1,0 +1,82 @@
+artifact: observed_rdn_v2_sealed
+status: sealed_confirmatory
+protocol_document: documents/observed-RDN-v2-sealed-preregistration.md
+output_root: outputs/observed_rdn_v2
+# Sealed confirmation of the both-margin conditional test of relational dynamics (Proposition 1 of the
+# manuscript): validity on static histories (including non-uniform clock marginals and asymmetric product
+# clock readout) and sensitivity on the declared families, plus a post hoc retrospective on the S3 supports.
+
+design_source:
+  development_config: p3_d1_v7.yaml        # screen settings and generative specification
+  dev_inputs:
+    outputs/observed_rdn_v2/observed_rdn_v2.json: 9ee2d2ba178739c48540959f0dc2a32c112e3067b3d4185888b14380adbd7f36
+    outputs/observed_rdn_v2/observed_rdn_v2_declaration.json: b87e6adec8fa2f89c44c7d3a04cf6fd7dd8ed37e2cf445a62dfa796cc243650b
+    outputs/observed_rdn/observed_rdn.json: 2a85edc3fb3cde614f704511ffa097315c0860fe8412c18e829a38a25ca29d75
+
+test:                                       # unchanged from development
+  name: both_margin_conditional_g
+  alpha_primary: 0.01
+  alpha_reported: [0.05]
+  monte_carlo_draws: 10000
+  monte_carlo_seed: 53830
+
+masks: s3_rule                              # support_contexts_for_deficit, seed key p3v2:{bank_id}:{deficit}:{i}
+
+bank:
+  bank_id: observed_rdn_v2_sealed
+  seed: 53800
+  observation_seed: 53810
+  haar_seed: 53820
+  block_count: 512
+  dirichlet_concentration: 8.0
+  minimum_mode_probability: 0.15
+  phase_range: [0.0, 6.283185307179586]
+  families:
+    - tau_flat
+    - tau_flat_readout_0.05
+    - nonuniform_clock_static_0.5
+    - tau_flat_clock_skew_0.1
+    - tau_flat_xor_0.05                     # report only: outside the product-readout assumption
+    - pure
+    - dephased_0.75
+    - dephased_0.9
+    - readout_0.05
+    - pure_clock_skew_0.1
+    - registry_violating
+  null_families: [tau_flat, tau_flat_readout_0.05, nonuniform_clock_static_0.5, tau_flat_clock_skew_0.1]
+  assumption_violating_families: [tau_flat_xor_0.05]
+
+analysis:
+  kappa_bins: [0, 0.25, 0.5, 1, 2, 4, 1000]
+
+endpoints:
+  alpha_per_test: 0.05
+  combination: intersection_union           # the claim passes only if every test passes
+  tests:
+    - {name: T1_null_pooled, family: [tau_flat, tau_flat_readout_0.05, nonuniform_clock_static_0.5, tau_flat_clock_skew_0.1], stratum: pooled, p0: 0.02, direction: less}
+    - {name: T2_tau_flat_low, family: tau_flat, stratum: low, p0: 0.035, direction: less}
+    - {name: S_pure_medium, family: pure, stratum: medium, p0: 0.97, direction: greater}
+    - {name: S_pure_low, family: pure, stratum: low, p0: 0.97, direction: greater}
+    - {name: S_dephased_0.75_medium, family: dephased_0.75, stratum: medium, p0: 0.97, direction: greater}
+    - {name: S_dephased_0.75_low, family: dephased_0.75, stratum: low, p0: 0.97, direction: greater}
+    - {name: S_readout_0.05_medium, family: readout_0.05, stratum: medium, p0: 0.97, direction: greater}
+    - {name: S_readout_0.05_low, family: readout_0.05, stratum: low, p0: 0.97, direction: greater}
+    - {name: S_pure_clock_skew_0.1_medium, family: pure_clock_skew_0.1, stratum: medium, p0: 0.97, direction: greater}
+    - {name: S_pure_clock_skew_0.1_low, family: pure_clock_skew_0.1, stratum: low, p0: 0.97, direction: greater}
+    - {name: S_registry_violating_medium, family: registry_violating, stratum: medium, p0: 0.97, direction: greater}
+    - {name: S_registry_violating_low, family: registry_violating, stratum: low, p0: 0.97, direction: greater}
+    - {name: S_dephased_0.9_medium, family: dephased_0.9, stratum: medium, p0: 0.80, direction: greater}
+    - {name: S_dephased_0.9_low, family: dephased_0.9, stratum: low, p0: 0.20, direction: greater}
+
+s3_retrospective:                           # post hoc, on the opened S3 sealed bank
+  enabled: true
+  artifact: outputs/p3_s3_confirmatory/p3_s3_confirmatory.json
+  artifact_sha256: 66a2267dca3f84b435f0a6cc63546617a719706b4b5868def0b82157356c06a2
+  config: p3_s3_confirmatory.yaml
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+  previously_allocated: [53500, 53600, 53700, 53710, 53720, 53740, 53750, 53760, 53790]
+  allocated_here: [53800, 53810, 53820, 53830]
+
+workers: 6

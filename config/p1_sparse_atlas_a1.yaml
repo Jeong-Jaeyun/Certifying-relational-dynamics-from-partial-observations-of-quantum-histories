@@ -1,0 +1,138 @@
+protocol_version: p1_sparse_atlas_a1
+role: sbp_body_sparse_atlas_calibration_and_sealed_evaluation
+status: preregistered_atlas_admission
+coherent_core_gamma: 1.0
+protocol_document: documents/P1-sparse-atlas-A1-protocol.md
+output_root: outputs/p1_sparse_atlas_a1
+# T1 (P1 sparse selector D1-v4, run 2) ended selector_stability_qualified, which permits only this new
+# sparse-atlas preregistration (user decision 2026-11-21). Fixed inputs, all read-only and hash-checked:
+# the SBP estimator and screen of D1-v7, the frozen S3 low bodies, the ilgc_v1_2 selector settings of T1,
+# and the T1 selector budget. The atlas rule (bootstrap, threshold fitting, gates) is the P1-R4 rule.
+# New here: a fresh D_atlas_cal fits the atlas thresholds, and a separate sealed D_atlas_eval tests how
+# often the emitted witnesses give an atlas and paths that pass the hard vertex and edge gates.
+
+design_source:
+  development_config: p3_d1_v7.yaml          # estimator and screen sections must be identical
+selector_source:
+  config: p1_sparse_selector_d1_v4.yaml      # certificate and bodies sections must be identical
+  artifact: outputs/p1_sparse_selector_d1_v4_run2/p1_sparse_selector_d1_v4.json
+  artifact_sha256: 8d09880ee6eaf1bee1fab6d178a640485901face01289a526cf27c42f5c21a5a
+  required_status: selector_stability_qualified
+  operational_error_budget: 0.007644142507474676
+atlas_rule_source:
+  config: p1_atlas_r4.yaml                   # bootstrap rule, threshold method and coverage floors
+  operational_config: p1_ilgc_operational_r4.yaml   # confirmatory existence_lcb_floor
+
+ilgc_targets:
+  operational_config: p1_ilgc_operational_r4.yaml
+
+estimator:
+  method: shared_branch_pair_v1
+  starts: 32
+  seed: 0
+  probability_floor: 1.0e-6
+  likelihood_floor: 1.0e-12
+  near_optimal_nats: 1.0
+  max_iterations: 4000
+  pair_observability_threshold: 0.05
+
+screen:
+  method: support_identifiability_screen_v1
+  pauli_commutant: true
+  disconnected_branch_null_tail_epsilon: 1.0e-6
+
+bodies:
+  # Read-only use of the frozen S3 calibration (low = P1 sparse_information); never recomputed here.
+  source_artifact: outputs/p3_s3_calibration/p3_s3_calibration.json
+  source_artifact_sha256: 2144a7c4cb2d321026f05c7a9b29022eb69f2f49e6cd42de22ea46d74e4673fb
+  calibration_hash: c4f61ad444ce3eaeec5bb15382ba171dff9edea94c16770ba3bac7dff4470d7f
+  deficit: low
+
+certificate:
+  existence: bi_only_with_registry          # BI primal_verified implies Q primal_verified (F_BI is inside F_Q)
+  precision_dps: 80
+  proposal_backends: [CLARABEL]
+  selector:
+    formulation: ilgc_v1_2
+    precision_dps: 80
+    kernel: {backends: [CLARABEL], body_guard: 1.0e-5, kernel_reduction: true}
+    congruence:
+      body_guard: 1.0e-5
+      routes:
+        - {backend: CLARABEL, constraint_guard: 1.0e-2}
+        - {backend: CLARABEL_refine, constraint_guard: 1.0e-2}
+        - {backend: CLARABEL_refine, constraint_guard: 1.0e-3}
+    lower_bound: {joint_backends: [CLARABEL], fixed_direction_backends: [CLARABEL, CLARABEL_refine]}
+  rdn: report_only                         # rdn_v1 with the energy-pinched refutation candidates, as in D1-v7 and T1
+
+selector_bootstrap:
+  method: first_emitting_calibration_block_pilot_v1   # R4: first verified construction per stratum
+  resample: parametric_support_multinomial_v1         # R4: sample_shot_batch from the pilot support table
+  B_boot: 32
+  alpha_wit: 0.05
+  emission_lcb_alpha: 0.05
+  pi_sel_min: 0.80
+  B_sel_min: 24
+  max_unresolved_rate: 0.00
+  unresolved_typing: numerical_only_v1                 # selector accuracy abstentions and BI decision gaps are non-emissions, not unresolved
+  seed: 54143
+  embedding_metric:
+    method: clean_two_qubit_construction_covariance_v1
+    shrinkage: 0.10
+    eigenvalue_floor: 1.0e-6
+
+atlas_calibration:
+  method: construction_seed_blocked_mean_std_v1
+  minimum_construction_blocks: 24
+  kappa:
+    p_min: 2.0
+    theta_align: 2.0
+    theta_wit: 2.0
+    theta_tr: 2.0
+    theta_dir: 2.0
+  eligible: screened_in_and_selector_verified_emission
+
+evaluation_gate:                           # D_atlas_eval only; one-sided Wilson lower bounds
+  lcb_alpha: 0.05
+  existence_lcb_floor: 0.25                # BI primal_verified / all evaluation blocks
+  atlas_given_selector_lcb_floor: 0.25     # atlas accepted / selector emissions
+  choice_lcb_floor: 0.25                   # nontrivial path choice / all evaluation blocks
+
+banks:
+  D_atlas_ref:                             # construction-only reference for the slice-embedding metric (no observations)
+    bank_id: p1_sparse_atlas_a1_reference
+    seed: 54140
+    block_count: 32
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+  D_atlas_cal:
+    bank_id: p1_sparse_atlas_a1_calibration
+    seed: 54141
+    block_count: 48
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54241
+  D_atlas_eval:                            # sealed: built and opened only after a qualified atlas calibration
+    bank_id: p1_sparse_atlas_a1_evaluation_sealed
+    seed: 54142
+    block_count: 64
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54242
+
+independence:
+  atlas_threshold_data: D_atlas_cal        # with D_atlas_ref (construction-only metric) and the bootstrap pilot from D_atlas_cal
+  atlas_evaluation_data: D_atlas_eval
+  shared_frozen_inputs: [S3 calibration artifact (bodies), T1 selector budget]
+  s3_rdn_confirmation_data: the S3 sealed evaluation bank in the reserved namespace, declared separately; it must be disjoint from these banks
+  outcome_dependence: none                 # neither experiment's outcome changes the other's rule or decision
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+  built: false
+  opened: false
+
+workers: 6

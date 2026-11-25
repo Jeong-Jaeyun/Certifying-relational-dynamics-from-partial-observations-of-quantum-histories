@@ -1,0 +1,60 @@
+artifact: p3_s3_calibration
+status: s3_calibration_freeze
+coherent_core_gamma: 1.0
+protocol_document: documents/P3-s3-calibration-protocol.md
+output_root: outputs/p3_s3_calibration
+# P3 S3 calibration freeze (2026-11-21). User decisions of 2026-11-21: S3 freezes a fresh calibration
+# draw (not one of the four D1-v7 draws), and the support-only screen v1 is frozen as it is. The design
+# is config/p3_statistical_protocol_v2.yaml rdn_primary_claim.selected_design, read off the D1-v7 rule.
+# No evaluation bank is built or opened here and no certificate is computed.
+
+design_source:
+  development_config: p3_d1_v7.yaml                     # estimator and screen sections must be identical
+  statistical_protocol: p3_statistical_protocol_v2.yaml # selected_design must name a fresh draw of this size
+
+ilgc_targets:
+  operational_config: p1_ilgc_operational_r4.yaml
+
+estimator:
+  # Identical to config/p3_d1_v7.yaml (checked at load).
+  method: shared_branch_pair_v1
+  starts: 32
+  seed: 0
+  probability_floor: 1.0e-6
+  likelihood_floor: 1.0e-12
+  near_optimal_nats: 1.0
+  max_iterations: 4000
+  pair_observability_threshold: 0.05
+
+screen:
+  # Identical to config/p3_d1_v7.yaml (checked at load); frozen for S3.
+  method: support_identifiability_screen_v1
+  pauli_commutant: true
+  disconnected_branch_null_tail_epsilon: 1.0e-6
+
+calibration_bank:
+  # Fresh seeds outside the reserved confirmatory namespace, which stays sealed for the S3 evaluation bank.
+  bank_id: p3_s3_calibration_v1
+  seed: 54126
+  block_count: 192
+  dirichlet_concentration: 8.0
+  minimum_mode_probability: 0.15
+  phase_range: [0.0, 6.283185307179586]
+  observation_seed: 54226
+deficits: [medium, low]
+
+calibration:
+  blocks_per_stratum: 160
+  order: block_index_ascending
+  population: first_n_screened_in_blocks_per_stratum
+  radius_protocol: construction_seed_blocked_split_conformal_v1   # ILGC alpha per class, identity whitening
+  fitted_records: selected_screened_in_blocks_only
+  if_fewer_screened_in_blocks_than_required: no_freeze_user_decides   # the bank is not extended
+  if_anti_vacuity_ceiling_fails: no_freeze_user_decides
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+  built: false
+  opened: false
+
+workers: 6

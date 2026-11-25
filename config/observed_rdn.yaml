@@ -1,0 +1,56 @@
+artifact: observed_rdn
+status: development_only
+protocol_document: documents/observed-RDN-protocol.md
+output_root: outputs/observed_rdn
+# Model-free companion certificate of relational dynamics (user decision 2026-11-23, remedy 1 after the
+# G guard was not adopted). An exact conditional test of tau-flatness on the OBSERVED time-basis tables:
+# rejecting it rejects every energy-pinched (static) state at once, with no model, calibration or coverage.
+
+design_source:
+  development_config: p3_d1_v7.yaml        # screen settings (reported alongside)
+  dev_inputs:
+    outputs/e5_rdn_specificity/e5_rdn_specificity.json: 05d0acd4f0c68609485ce6cf17b29daecb88f08c09c76e9df5b708dbe3612799
+    outputs/g_guard/g_guard_evaluation.json: c87b5724aa7c044b5f679f6059db0b6265a7163afaaabbe9f18de0a169e3bf0a
+
+test:
+  name: observed_tau_flat_conditional_g     # per observed D context and system outcome s: tau uniform given N_s
+  alpha_primary: 0.01
+  alpha_reported: [0.05]
+  monte_carlo_draws: 10000
+  monte_carlo_seed: 56404
+
+strata: [medium, low]
+masks: s3_rule
+
+fresh_bank:                                 # new development bank (no fits needed)
+  bank_id: observed_rdn_v1
+  seed: 56401
+  observation_seed: 56402
+  haar_seed: 56403
+  block_count: 512
+  dirichlet_concentration: 8.0
+  minimum_mode_probability: 0.15
+  phase_range: [0.0, 6.283185307179586]
+  families: [tau_flat, tau_flat_readout_0.05, pure, dephased_0.1, dephased_0.25, dephased_0.5, dephased_0.75, dephased_0.9, dephased_0.95, readout_0.02, readout_0.05, readout_0.1, registry_violating]
+  null_families: [tau_flat, tau_flat_readout_0.05]
+
+existing_banks:                             # supports regenerated deterministically; joined with the model-route outcomes
+  e5:
+    artifact: outputs/e5_rdn_specificity/e5_rdn_specificity.json
+    role: e5_support
+  g_guard:
+    artifact: outputs/g_guard/g_guard_evaluation.json
+    config: g_guard.yaml
+    role: g_guard_support
+
+endpoints:
+  O1_type_one: {families: null_families, statistic: certification_rate_at_alpha_primary, check: clopper_pearson_95_upper_vs_alpha}
+  O2_sensitivity: {statistic: certification_rate_per_family_and_stratum}
+  O3_dose_response: {statistic: certification_rate_by_true_kappa_bin, bins: [0, 0.25, 0.5, 1, 2, 4, 1000]}
+  O4_versus_model_route: {statistic: joint_table_on_existing_banks}
+  O5_screen_agreement: {statistic: crosstab_screen_pass_vs_observed_rdn}
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+
+workers: 6

@@ -1,0 +1,69 @@
+artifact: e2_scope_extension
+stage: e2
+status: development_only
+protocol_document: documents/E2-scope-extension-protocol.md
+output_root: outputs/e2_scope_extension
+# E2: does the exact orbit and its one-context repair carry over to system bases outside the four registered
+# unitaries? Constructed type-3a bases, small perturbations of them, and unconstrained Haar bases.
+
+design_source:
+  development_config: p3_d1_v7.yaml
+  dev_inputs:
+    outputs/m1_added_measurement/m1_added_measurement.json: bb61f9c6f6fc20d20cb3a783a890d514a8f8f71f6b648d9b4857fb7070d3b776
+    outputs/m1_e3_rules/m1_e3_rules.json: 9f10eb891e3da581682f31eeb282fbdf3b0af2ef50bfaeabff6fef5f1c8d7f9b
+
+estimator:
+  method: shared_branch_pair_v1
+  starts: 32
+  seed: 0
+  probability_floor: 1.0e-6
+  likelihood_floor: 1.0e-12
+  near_optimal_nats: 1.0
+  max_iterations: 4000
+  pair_observability_threshold: 0.05
+
+bank:
+  bank_id: e2_scope_v1
+  seed: 56801
+  observation_seed: 56802
+  mask_seed: 56803
+  dirichlet_concentration: 8.0
+  minimum_mode_probability: 0.15
+  phase_range: [0.0, 6.283185307179586]
+
+generation:
+  constructed_3a: {quota: 128, cap: 1024, projection_tries: 8, projection_tolerance: 1.0e-12}
+  perturbed_3a: {base_records: 64, epsilons: [0.01, 0.03, 0.1]}      # U -> exp(i eps G) U, G Hermitian with unit Frobenius norm
+  haar: {quota: 128, cap: 1024}
+
+added_context:
+  n_shot: 2048
+  primary_rule: max_s_Q_at_support_only_fit
+  comparator_rule: first_in_sorted_context_id_order
+  tie_relative_tolerance: 1.0e-12
+control:
+  extra_shots_per_support_context: 256
+
+certificate:
+  families: [constructed_3a]                # A0 and A_s tables, frozen S3 low bodies, each record's own registry
+  precision_dps: 80
+  proposal_backends: [CLARABEL]
+  refine_unresolved_with_optimal_classical_state: true
+
+evaluation:
+  primary_class: diag
+  common_set: all_contexts_minus_support_minus_Qs_Qf
+  level: 0.9
+  bootstrap: {resamples: 10000, seed: 56804, interval: [0.025, 0.975]}
+
+endpoints:
+  X1_mechanism: {family: constructed_3a, checks: [support_circle_deviation_below_1e-10, A0_minus_C_interval_contains_or_below_zero]}
+  X2_same_budget: {family: constructed_3a, contrast: [C, A_s], pass: lower_2.5_percent_above_frozen_low_diag_radius}
+  X3_near_exact: {families: [perturbed_0.01, perturbed_0.03, perturbed_0.1], report: [cvar_per_arm, contrasts, classes]}
+  X4_generic: {family: haar, report: [exact_3a_count, cvar_per_arm, contrasts]}
+  X5_recertification: {family: constructed_3a, report: [A0_success, A_s_success, fiber_coverage]}
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+
+workers: 6

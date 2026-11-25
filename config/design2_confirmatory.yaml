@@ -1,0 +1,27 @@
+# Design 2 sealed confirmatory run (documents/design2-confirmatory-preregistration.md).
+status: sealed_confirmatory
+protocol_document: documents/design2-confirmatory-preregistration.md
+output_root: outputs/design2_confirmatory
+seeds:
+  construct: 57201
+  obs: 57202
+  perturb: 57203
+  mc: 57204
+  boot: 57205
+reserved_block: [57200, 57299]
+designs: [golomb, collision]
+shots: 2048
+records_per_family: 96
+families: [exact, near_0.03, structured_equal, generic, structured_random]
+controls: [static_uniform, static_nonuniform]
+records_per_control: 512
+estimator_starts: 32
+test:
+  alpha: 0.01
+  monte_carlo_draws: 10000
+bootstrap_resamples: 10000
+endpoints:
+  G: {families: [exact, near_0.03], contrast: [C, A_sig], lower_bound_above: 0.1}
+  Z: {families: [structured_equal], contrast: [A0, A_IZ], upper_bound_below: 0.05}
+  V1: {p0: 0.02, direction: less, level: 0.05}
+  V2: {families: [exact, near_0.03], p0: 0.97, direction: greater, level: 0.05}

@@ -1,0 +1,107 @@
+artifact: p3_d1_v7
+status: development_only
+coherent_core_gamma: 1.0
+protocol_document: documents/P3-d1-v7-protocol.md
+output_root: outputs/p3_d1_v7
+# P3 D1-v7 (2026-11-20). Shared branch-pair estimator with a predeclared support-only identifiability
+# screen; S3 calibration size and evaluation n are read off by the declared design rule below.
+# User decisions of 2026-11-20: screen predeclared; calibration = first 160 / 256 screened-in blocks
+# in a predeclared order; abstention counts as failure; every evaluation block stays in the denominator.
+
+ilgc_targets:
+  operational_config: p1_ilgc_operational_r4.yaml
+
+estimator:
+  # Identical to the D1-v6 shared_branch_pair settings.
+  method: shared_branch_pair_v1
+  starts: 32
+  seed: 0
+  probability_floor: 1.0e-6
+  likelihood_floor: 1.0e-12
+  near_optimal_nats: 1.0
+  max_iterations: 4000
+  pair_observability_threshold: 0.05
+
+screen:
+  method: support_identifiability_screen_v1
+  pauli_commutant: true
+  disconnected_branch_null_tail_epsilon: 1.0e-6
+
+development_banks:
+  calibration_0:
+    bank_id: p3_d1_v7_calibration_0
+    seed: 54121
+    block_count: 272
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54221
+  calibration_1:
+    bank_id: p3_d1_v7_calibration_1
+    seed: 54122
+    block_count: 272
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54222
+  calibration_2:
+    bank_id: p3_d1_v7_calibration_2
+    seed: 54123
+    block_count: 272
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54223
+  calibration_3:
+    bank_id: p3_d1_v7_calibration_3
+    seed: 54124
+    block_count: 272
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54224
+  evaluation:
+    bank_id: p3_d1_v7_evaluation
+    seed: 54125
+    block_count: 192
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 54225
+  deficits: [medium, low]
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+  built: false
+  opened: false
+
+reporting:
+  radius_protocol: construction_seed_blocked_split_conformal_v1   # ILGC alpha per class, identity whitening
+  calibration_draws: [calibration_0, calibration_1, calibration_2, calibration_3]
+  calibration_sizes: [160, 256]
+  calibration_order: block_index_ascending
+  calibration_population: first_n_screened_in_blocks_per_stratum
+  primary_set: {draw: calibration_0, size: 160}
+  certificate:
+    existence: bi_only_with_registry       # BI primal_verified implies Q primal_verified; selector not run
+    precision_dps: 80
+    proposal_backends: [CLARABEL]
+    primal_evidence_reuse_across_radius_sets: true   # proposals are untrusted; the 80-digit verifier judges every set
+  rdn_version: rdn_v1
+  rdn_refutation_candidates: [energy_pinched_bi_primal_state, energy_pinched_exact_state]
+  refine_unresolved_with_optimal_classical_state: primary_set_only
+  block_success: screened_in_and_bi_primal_verified_and_rdn_certified
+  abstention: failure
+  denominator: all_evaluation_blocks_of_the_stratum
+  unscreened_comparator: report_only_radius_coverage_and_rdn_implied   # first n blocks in order, no screen, no BI
+  coefficient_bins: branch_pairs_of_active_modes
+  design_rule:
+    strata: [medium, low]
+    statistic: minimum_over_draws_and_strata_of_full_block_success_rate
+    calibration_size: smallest_size_whose_statistic_is_at_least_floor
+    calibration_floor_rate: 0.88
+    evaluation_options:   # copied from config/p3_statistical_protocol_v2.yaml rdn_primary_claim.planning_options
+      - {planning_rate: 0.90, blocks_per_stratum: 160, pass_count: 137}
+      - {planning_rate: 0.88, blocks_per_stratum: 256, pass_count: 216}
+    otherwise: no_design_selected_user_decides
+  workers: 6

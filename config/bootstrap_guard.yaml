@@ -1,0 +1,49 @@
+artifact: bootstrap_guard
+status: development_only
+protocol_document: documents/bootstrap-guard-protocol.md
+output_root: outputs/bootstrap_guard
+# Record-specific parametric-bootstrap goodness-of-fit guard (remedy 2 after the conformal G guard was not adopted).
+# Each record is calibrated against its own fitted pure-history model, so the construction-level heterogeneity of
+# the G null that broke the conformal guard's transfer is absorbed by design.
+
+design_source:
+  development_config: p3_d1_v7.yaml        # estimator, screen and certificate settings
+  dev_inputs:
+    outputs/g_guard/g_guard_calibration.json: 6620e48e0114407f8ac98546276ede569367fd8ec44cab6ca45a86cf0fe1a8c1
+    outputs/g_guard/g_guard_evaluation.json: c87b5724aa7c044b5f679f6059db0b6265a7163afaaabbe9f18de0a169e3bf0a
+    outputs/observed_rdn/observed_rdn.json: 2a85edc3fb3cde614f704511ffa097315c0860fe8412c18e829a38a25ca29d75
+
+statistic:
+  name: support_G_parametric_bootstrap     # G* from supports drawn from the record's fitted support table, refitted
+  alpha: 0.05                              # abstain when p_bootstrap <= alpha
+  bootstrap_resamples: 49
+  extra_starts: 1                          # each refit: warm start at theta_hat plus one random start
+  bootstrap_seed: 56704
+
+conformal_comparator:                      # frozen thresholds of the conformal G guard, for paired comparison only
+  artifact: outputs/g_guard/g_guard_calibration.json
+
+masks: s3_rule
+bank:
+  bank_id: bootstrap_guard_v1
+  seed: 56701
+  observation_seed: 56702
+  haar_seed: 56703
+  block_count: 64
+  dirichlet_concentration: 8.0
+  minimum_mode_probability: 0.15
+  phase_range: [0.0, 6.283185307179586]
+
+families: [pure, dephased_0.05, dephased_0.1, dephased_0.25, readout_0.01, readout_0.02, readout_0.05]
+misspecified: [dephased_0.05, dephased_0.1, dephased_0.25, readout_0.01, readout_0.02, readout_0.05]
+
+endpoints:
+  B1_false_abstention_pure: {statistic: bootstrap_abstentions_among_screened_in_pure, consistent_if: clopper_pearson_95_lower_at_most_alpha}
+  B2_detection: {statistic: bootstrap_abstentions_among_screened_in_per_family, report: clopper_pearson_95}
+  B3_validity: {statistic: joint_truth_coverage_among_guarded_certified, target: 0.90, min_records: 20, per: family}
+  decision: adopt_if_B1_consistent_and_every_evaluable_misspecified_family_meets_B3
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+
+workers: 6

@@ -1,0 +1,121 @@
+artifact: m1_e1_confirmatory
+status: sealed_confirmatory
+coherent_core_gamma: 1.0
+protocol_document: documents/E1-preregistration.md
+output_root: outputs/m1_e1_confirmatory
+# E1 sealed confirmation (user decisions of 2026-11-22): under the same extra-shot budget, one D context
+# chosen from the support alone (max s_Q at the support-only fit) lowers the CVaR_0.9 of the held-out
+# diag error by more than one frozen low diag radius, against the same shots spread over the support
+# contexts. Two co-primary hypotheses on two independent sealed banks, combined by intersection-union:
+# H1 enriched screened-in 3a, H2 the natural flag-conditioned screened-in population.
+
+design_source:
+  development_config: p3_d1_v7.yaml        # estimator and screen must be identical
+  dev_inputs:
+    outputs/m1_added_measurement/m1_added_measurement.json: bb61f9c6f6fc20d20cb3a783a890d514a8f8f71f6b648d9b4857fb7070d3b776
+    outputs/m1_added_measurement_posthoc/m1_added_measurement_posthoc.json: 46ae1d70d79ebef7c74c819c227ad3057694d53da9424c5b1a5d40c3d8616909
+    outputs/m1_added_measurement_posthoc/m1_added_measurement_h_known.json: 13caa7281fdd2e6ee9a4ed367906ed819636f619b3c0da74a79c9a197eb8b889
+    outputs/m1_evidence_package/m1_evidence_package.json: 97b0fe29a86abe2fdbd68ada40fee0e3bb8e1a0566f33efc54b5df85f258737b
+    outputs/m1_e1_power/m1_e1_power.json: 9915b5f24717ed4f56a395ee955af05cf2de77ba0d631d60e0cc3f82a0d185f5
+    outputs/m1_e3_rules/m1_e3_rules.json: 9f10eb891e3da581682f31eeb282fbdf3b0af2ef50bfaeabff6fef5f1c8d7f9b
+    outputs/g_guard/g_guard_evaluation.json: c87b5724aa7c044b5f679f6059db0b6265a7163afaaabbe9f18de0a169e3bf0a
+    outputs/observed_rdn/observed_rdn.json: 2a85edc3fb3cde614f704511ffa097315c0860fe8412c18e829a38a25ca29d75
+
+ilgc_targets:
+  operational_config: p1_ilgc_operational_r4.yaml
+
+estimator:
+  # Identical to D1-v7 (checked against design_source.development_config).
+  method: shared_branch_pair_v1
+  starts: 32
+  seed: 0
+  probability_floor: 1.0e-6
+  likelihood_floor: 1.0e-12
+  near_optimal_nats: 1.0
+  max_iterations: 4000
+  pair_observability_threshold: 0.05
+
+screen:
+  method: support_identifiability_screen_v1
+  pauli_commutant: true
+  disconnected_branch_null_tail_epsilon: 1.0e-6
+
+deficit: low
+
+banks:
+  H1:
+    bank_id: m1_e1_h1_sealed
+    seed: 53700
+    observation_seed: 53710
+    mask_seed: 53720
+    block_count: 4096                 # generation cap
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    mask_population: d_mask_commutant_low_masks
+    acceptance: enriched_3a           # screened-in constructions of oracle class 3a, in index order
+    quota: 256
+    exact_class_tolerance: 1.0e-10
+  H2:
+    bank_id: m1_e1_h2_sealed
+    seed: 53740
+    observation_seed: 53750
+    mask_seed: 53760
+    block_count: 1024                 # generation cap
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    mask_population: d_mask_commutant_low_masks
+    acceptance: natural               # every screened-in construction, in index order (class recorded, not used)
+    quota: 256
+    exact_class_tolerance: 1.0e-10
+
+added_context:
+  n_shot: 2048
+  candidates: unobserved_input_D_anticommuting_with_R
+  primary_rule: max_s_Q_at_support_only_fit
+  comparator_rule: first_in_sorted_context_id_order
+  oracle_rule: max_truth_smin_rel_with_context_added
+  tie_relative_tolerance: 1.0e-12   # ties go to the fixed order
+
+control:
+  extra_shots_per_support_context: 256      # C: 8 x 256 = 2048 extra shots
+control_f:
+  extra_shots_total: 2048                   # C_F: all extra shots on the observed F contexts anticommuting with R
+  allocation: equal_over_observed_F_anticommuting_with_R
+
+evaluation:
+  primary_class: diag
+  common_set: all_contexts_minus_support_minus_Qs_Qf
+  oracle_set: common_set_minus_Qo
+  statistic: {name: cvar, level: 0.9, tail_count: ceil_of_0.1_n}
+  bootstrap: {resamples: 10000, seed: 53790, interval: [0.025, 0.975], pairing: same_record_indices}
+  orbit_distance_t_points: 96
+
+endpoints:
+  contrast: [C, A_s]                        # CVaR(C) - CVaR(A_s), diag error on the common set
+  delta_min: frozen_low_diag_radius         # 0.040296... read from the frozen S3 calibration
+  H1: {bank: H1, pass: lower_2.5_percent_above_delta_min}
+  H2: {bank: H2, pass: lower_2.5_percent_above_delta_min}
+  combination: intersection_union           # confirmed iff H1 and H2 both pass
+
+certificate:
+  # The S3 route, for the A0 and A_s tables, on the frozen S3 low bodies (read only).
+  existence: bi_only_with_registry
+  precision_dps: 80
+  proposal_backends: [CLARABEL]
+  rdn_version: rdn_v1
+  rdn_refutation_candidates: [energy_pinched_bi_primal_state, energy_pinched_exact_state]
+  refine_unresolved_with_optimal_classical_state: true
+
+bodies:
+  source_artifact: outputs/p3_s3_calibration/p3_s3_calibration.json
+  source_artifact_sha256: 2144a7c4cb2d321026f05c7a9b29022eb69f2f49e6cd42de22ea46d74e4673fb
+  calibration_hash: c4f61ad444ce3eaeec5bb15382ba171dff9edea94c16770ba3bac7dff4470d7f
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+  previously_allocated: [53500, 53600]      # S3 sealed evaluation bank
+  allocated_here: [53700, 53710, 53720, 53740, 53750, 53760, 53790]
+
+workers: 6

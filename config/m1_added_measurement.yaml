@@ -1,0 +1,92 @@
+artifact: m1_added_measurement
+status: development_only
+coherent_core_gamma: 1.0
+protocol_document: documents/M1-added-measurement-design.md
+output_root: outputs/m1_added_measurement
+# M1 Q1 verification (user decisions of 2026-11-22): risk detection on a fixed support (3a/3b reported
+# separately) and recovery by one added D context chosen from the support alone (max s_Q at the A0 fit),
+# against the fixed-order comparator, a same-budget control and a truth-fixed oracle.
+
+design_source:
+  development_config: p3_d1_v7.yaml        # estimator and screen must be identical
+  dev_inputs:
+    outputs/m1_third_mechanism/m1_added_context_check.json: 6dbc104287c314f424430dcea5245b247633fe8103dca74eadfbd3e76e6f0979
+    outputs/m1_third_mechanism/m1_orbit_kappa_check.json: c0f7d8f06adc743c67fa6a12320a99c94ac220d103316d5a1d464151f50718ef
+
+ilgc_targets:
+  operational_config: p1_ilgc_operational_r4.yaml
+
+estimator:
+  # Identical to D1-v7 (checked against design_source.development_config).
+  method: shared_branch_pair_v1
+  starts: 32
+  seed: 0
+  probability_floor: 1.0e-6
+  likelihood_floor: 1.0e-12
+  near_optimal_nats: 1.0
+  max_iterations: 4000
+  pair_observability_threshold: 0.05
+
+screen:
+  method: support_identifiability_screen_v1
+  pauli_commutant: true
+  disconnected_branch_null_tail_epsilon: 1.0e-6
+
+deficit: low
+
+bank:
+  bank_id: m1_added_measurement_v1
+  seed: 55301
+  block_count: 2048                 # maximum flagged constructions generated
+  dirichlet_concentration: 8.0
+  minimum_mode_probability: 0.15
+  phase_range: [0.0, 6.283185307179586]
+  observation_seed: 55302
+  mask_seed: 55303
+  mask_population: d_mask_commutant_low_masks   # the 110 flagged low masks
+  quotas: {3a: 128, 3b: 128}
+  exact_class_tolerance: 1.0e-10    # branch condition at the true branch directions
+  planning_rate_3a: [41, 440]       # exact screened-in / flagged (unitary, mask), exhaustive development table
+
+added_context:
+  n_shot: 2048
+  candidates: unobserved_input_D_anticommuting_with_R
+  primary_rule: max_s_Q_at_support_only_fit
+  comparator_rule: first_in_sorted_context_id_order
+  oracle_rule: max_truth_smin_rel_with_context_added
+  tie_relative_tolerance: 1.0e-12   # ties go to the fixed order
+
+control:
+  extra_shots_per_support_context: 256
+
+evaluation:
+  primary_class: diag
+  common_set: all_contexts_minus_support_minus_Qs_Qf
+  oracle_set: common_set_minus_Qo
+  statistic: {name: cvar, level: 0.9, tail_count: ceil_of_0.1_n}
+  bootstrap: {resamples: 10000, seed: 55304, interval: [0.025, 0.975], pairing: same_record_indices}
+  orbit_distance_t_points: 96
+
+endpoints:
+  stratum: 3a
+  P1: {difference: [A0, A_s], pass: interval_above_zero}
+  P2: {difference: [A_f, A_s], above_zero: s_Q_lower_tail, below_zero: fixed_order_replaces_s_Q, contains_zero: not_distinguished_keep_s_Q}
+
+certificate:
+  # The S3 route for A0, on the frozen S3 low bodies (read only).
+  existence: bi_only_with_registry
+  precision_dps: 80
+  proposal_backends: [CLARABEL]
+  rdn_version: rdn_v1
+  rdn_refutation_candidates: [energy_pinched_bi_primal_state, energy_pinched_exact_state]
+  refine_unresolved_with_optimal_classical_state: true
+
+bodies:
+  source_artifact: outputs/p3_s3_calibration/p3_s3_calibration.json
+  source_artifact_sha256: 2144a7c4cb2d321026f05c7a9b29022eb69f2f49e6cd42de22ea46d74e4673fb
+  calibration_hash: c4f61ad444ce3eaeec5bb15382ba171dff9edea94c16770ba3bac7dff4470d7f
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+
+workers: 6

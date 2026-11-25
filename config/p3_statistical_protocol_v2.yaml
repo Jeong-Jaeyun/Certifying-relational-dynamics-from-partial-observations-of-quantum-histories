@@ -1,0 +1,111 @@
+# P3 statistical protocol v2 -- PROPOSED defaults adopted from the literature.
+# Not frozen. A P3 preregistration must copy (and may revise) these choices before any
+# confirmatory bank is opened. See documents/P3-0-statistical-engine-v2.md.
+protocol_version: p3_statistical_protocol_v2_decided
+statistical_engine_version: p3_paired_bound_engine_v2
+status: user_decided_2026_11_20_not_frozen   # frozen only inside the S3 preregistration
+frozen_before_confirmatory_data: false
+historical_artifact: false
+
+# --- User decisions of 2026-11-20 (formulation patch v3 §5.2, §10) -----------------------------
+rdn_primary_claim:
+  family: F_RDN
+  statement: >-
+    Under the declared generative distribution, the RDN certification rate exceeds 0.80 in both the
+    medium and the low stratum.
+  engine: bi_qmn.stats.rdn_rate_test
+  unit: construction_block
+  block_success: bi_primal_verified_and_rdn_certified
+  denominator: all_evaluation_blocks_of_the_stratum   # refuted / unresolved / BI-unverified stay in, count as failures
+  strata: [medium, low]
+  p0: 0.80
+  test: exact_binomial_one_sided                     # == one-sided 95% Clopper-Pearson lower bound > p0
+  one_sided_alpha_per_stratum: 0.05
+  combination: intersection_union                    # both must pass; claim level = 0.05
+  family_p_value: max_over_strata                    # input to the graphical procedure below
+  single_stratum_confirmation: not_claimed           # would need its own multiplicity rule (e.g. Holm)
+  ilgc_body_alpha_is_separate: true                  # alpha_diag = 0.04 calibrates the body, not this claim
+  target_joint_power_min: 0.90                       # Bonferroni/Frechet lower bound; no independence assumed
+  planning_options:
+    - {planning_rate: 0.90, blocks_per_stratum: 160, pass_count: 137, per_stratum_power: 0.971, joint_power_lower_bound: 0.942}
+    - {planning_rate: 0.88, blocks_per_stratum: 256, pass_count: 216, per_stratum_power: 0.966, joint_power_lower_bound: 0.932}
+  planning_rate_source: repeated_new_estimator_development_runs_low_stratum_bi_and_rdn   # decides 160 vs 256
+  selected_design:                                   # 2026-11-21: predeclared D1-v7 design rule, applied as agreed by the user
+    source: outputs/p3_d1_v7/p3_d1_v7_development.json   # sha256 78d76c7cc460569fa76dd023e1b4138c4266cbb4f6cc0c99c393fb2f09404e60
+    report: documents/P3-d1-v7-run.md
+    estimator: shared_branch_pair_v1                 # settings as in config/p3_d1_v7.yaml
+    support_screen: {version: support_identifiability_screen_v1, disconnected_branch_null_tail_epsilon: 1.0e-6, frozen_for_s3: true}
+    screened_out_block: abstains_and_counts_as_failure_denominator_keeps_all_blocks
+    residual_support_nonidentifiability: known_limitation_of_the_coverage_claim   # decided 2026-11-21: option (a); mechanism characterization is a separate task, not an S3 input
+    calibration_blocks_per_stratum: 160              # first 160 screened-in blocks in ascending block index
+    calibration_draw: fresh_draw                     # decided 2026-11-21: config/p3_s3_calibration.yaml (bank p3_s3_calibration_v1), frozen by outputs/p3_s3_calibration/
+    frozen_calibration:                              # 2026-11-21, documents/P3-s3-calibration-run.md; cite, never recompute
+      artifact: outputs/p3_s3_calibration/p3_s3_calibration.json   # sha256 2144a7c4cb2d321026f05c7a9b29022eb69f2f49e6cd42de22ea46d74e4673fb
+      calibration_hash: c4f61ad444ce3eaeec5bb15382ba171dff9edea94c16770ba3bac7dff4470d7f
+      radii: {medium: {diag: 0.019870366862317548, coh: 0.02871110292651041}, low: {diag: 0.040296296223098556, coh: 0.05773687224029173}}
+    planning_rate: 0.90                              # rule statistic m(160) = 0.9792 (min over 4 draws x {medium, low})
+    blocks_per_stratum: 160
+    pass_count: 137
+  calibration: freeze_once_then_single_final_analysis
+  development_sensitivity: independent_calibration_draws_required    # 48-block conformal radius is the block maximum
+  report_only: [r_diag, kappa_distribution, unobserved_D_modulation_recovery, difference_vs_model_a, atlas_citable_rate_rdn_given_atlas]
+
+s2_entry_screen:
+  bank: fresh_development_evaluation_bank
+  rule: observed_rate_ge_0.80_in_medium_and_low   # 48 blocks -> >= 39 each; a screen, not a test
+  also_required: calibration_resampling_sensitivity_of_r_diag_and_kappa
+
+claim_families:
+  F_RDN: {initial_alpha: 0.05, role: primary}
+  F_frontier: {initial_alpha: 0.0, role: critical_budget_frontier_replication}
+  F_structural: {initial_alpha: 0.0, role: matched_structural_gain_replication}
+  transitions:
+    F_RDN: {F_frontier: 0.5, F_structural: 0.5}      # Holm after RDN passes: each starts at 0.025
+    F_frontier: {F_structural: 1.0}                  # one passes -> the other gets 0.05
+    F_structural: {F_frontier: 1.0}
+  model_a_superiority: requires_separate_preregistered_paired_endpoint
+
+paired_binary_endpoints:
+  # {-1, 0, +1} block differences: Q/BI/selector/atlas coverage, numerical unresolved, harmful atlas.
+  decision_bound: tango_score            # Tango (1998); recommended by Fagerland, Lydersen & Laake (2014)
+  margin_zero_sensitivity_test: mcnemar_exact_conditional
+  report_only: [exact_bootstrap_enumeration, mcnemar_mid_p]
+  monte_carlo_bootstrap_for_decisions: forbidden
+  one_sided_alpha: 0.05
+
+continuous_paired_endpoints:
+  # e.g. predictive NLL deltas.
+  decision_bound: common_index_bootstrap
+  replicates: 20000
+  shared_indices_across_endpoints: true
+  monte_carlo_error_manifest: required
+  sensitivity_test: sign_flip_randomization
+
+multiplicity:
+  method: graphical_bretz_2009          # Holm is the special case with uniform transitions
+  composite_claims: forbidden           # frontier replication and matched structural replication are separate families
+
+accumulation_across_fresh_banks:
+  method: lan_demets_group_sequential
+  spending: obrien_fleming_type
+  pooled_post_hoc_bootstrap: forbidden
+
+sample_size:
+  method: exact_enumerated_power
+  bound: tango_score
+  report_sawtooth_safe_n: true          # Chernick & Liu (2002)
+  asymptotic_cross_check: connor_1987
+  target_power: 0.8
+
+order_statistic_calibration:
+  marginal_rule: split_conformal_order_index   # k = ceil((n + 1)(1 - alpha))
+  report_training_conditional_delta: true      # Vovk (2012)
+  exchangeability_audit: beta_binomial_exceedance_tail
+
+user_decisions_required_before_freeze:
+  # decided 2026-11-20: one_sided_alpha / target_power for F_RDN; claim families and graphical weights/transitions
+  # decided 2026-11-21: planning rate 0.90 -> 160 blocks per stratum, pass 137; calibration 160 screened-in (rdn_primary_claim.selected_design)
+  # decided 2026-11-21: S3 freezes a fresh calibration draw; the screen is frozen and the residual mechanism is a known limitation
+  - alpha / power targets inside F_frontier and F_structural if they are run in the same S3
+  - whether exact_bootstrap_enumeration replaces tango_score for continuity with P2
+  - information fractions if group-sequential looks are used

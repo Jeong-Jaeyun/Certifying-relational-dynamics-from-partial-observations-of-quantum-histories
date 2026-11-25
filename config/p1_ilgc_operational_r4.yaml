@@ -1,0 +1,137 @@
+formulation_version: ilgc_v1_1
+scientific_protocol_version: p1_r4_v1
+artifact_namespace: ilgc_r4
+role: p1_estimator_facing_calibration
+precision_dps: 80
+selector_candidate_body_guard: 1.0e-5
+proposal_backends: [CLARABEL]
+
+estimator:
+  method: adaptive_kernel_free_table_v2
+  selection_source: p1_r4_preregistered_current_source_protocol
+  neighbor_count: 8
+  distance_power: 2.0
+  probability_floor: 1.0e-6
+
+matched_comparator:
+  method: flat_masked_kernel_free_table_v2
+  capacity_match: same_training_records_neighbors_power_and_output_table
+
+population:
+  claim: in_distribution
+  family: seeded_dirichlet_phase_categorical_unitary_v1
+
+strata:
+  high: full_information
+  medium: medium_information
+  low: sparse_information
+
+calibration_body:
+  method: construction_seed_blocked_split_conformal_v1
+  simultaneous_global_alpha: 0.10
+  coverage_allocation: bonferroni_context_classes_v1
+  alpha:
+    diag: 0.04
+    coh: 0.04
+  minimum_construction_blocks: 48
+  whitening:
+    method: identity_weighting_v1
+  positive_radius_floor: 1.0e-10
+  descriptive_radius_inflation: 1.000001
+
+anti_vacuity:
+  required: true
+  ceiling_source: legacy_p1_diagnostic_pilot_v1
+  normalized_radius_ceiling:
+    full_information: {diag: 0.025, coh: 0.040}
+    medium_information: {diag: 0.040, coh: 0.060}
+    sparse_information: {diag: 0.050, coh: 0.080}
+  log_volume_role: report_only
+  point_estimate_realizability: not_evaluated
+
+selector_calibration:
+  method: construction_seed_blocked_selector_error_v1
+  alpha: 0.02
+  minimum_construction_blocks: 64
+  diagnostic_error_budget: 0.05
+  scientific_error_ceiling: 0.05
+  budget_inflation: 1.000001
+
+disjoint_banks:
+  method: seeded_dirichlet_phase_categorical_unitary_v1
+  training:
+    bank_id: p1_r4_training_v1
+    seed: 94001
+    block_count: 96
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 94101
+    replicates: 1
+  reference:
+    bank_id: p1_r4_reference_v1
+    seed: 94002
+    block_count: 32
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+  calibration:
+    bank_id: p1_r4_body_calibration_v1
+    seed: 94003
+    block_count: 48
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 94103
+    replicates: 1
+  selector_calibration:
+    bank_id: p1_r4_selector_calibration_v1
+    seed: 94004
+    block_count: 64
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 94104
+    replicates: 1
+  atlas_calibration:
+    bank_id: p1_r4_atlas_calibration_v1
+    seed: 94005
+    block_count: 48
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 94105
+    replicates: 1
+  evaluation:
+    bank_id: p1_r4_evaluation_v1_sealed
+    seed: 94006
+    block_count: 24
+    dirichlet_concentration: 8.0
+    minimum_mode_probability: 0.15
+    phase_range: [0.0, 6.283185307179586]
+    observation_seed: 94106
+    replicates: 1
+
+confirmatory:
+  worker_count: 6
+  certificate_timeout_seconds: 600.0
+  required_strata: [full_information, medium_information]
+  report_only_strata: [sparse_information]
+  lcb_alpha: 0.05
+  existence_lcb_floor: 0.25
+
+gamma_robustness:
+  values: [1.0, 0.6, 0.2, 0.0]
+  role: coherence_and_constraint_robustness_curve_report_only
+  rejection_gate: false
+
+soundness_controls:
+  role: mechanical_conformance_gate
+  body_radius:
+    diag: 1.0e-4
+    coh: 1.0e-4
+
+downstream:
+  selector_bootstrap_status: not_evaluated
+  atlas_calibration_status: not_evaluated
+  policy: block_vertex_edge_atlas_until_typed_p1_selector_bootstrap_is_qualified

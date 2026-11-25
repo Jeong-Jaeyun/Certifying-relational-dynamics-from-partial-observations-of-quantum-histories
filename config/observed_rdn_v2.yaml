@@ -1,0 +1,74 @@
+artifact: observed_rdn_v2
+status: development_only
+protocol_document: documents/observed-RDN-v2-protocol.md
+output_root: outputs/observed_rdn_v2
+# Both-margin conditional test of relational dynamics (the test of the manuscript's Proposition 1), development.
+# Conditioning on both margins of every observed D table removes the clock marginal as a nuisance parameter, so
+# the guarantee holds for any clock marginal and any product readout channel. The v1 uniform-clock test is
+# computed on the same counts for comparison.
+
+design_source:
+  development_config: p3_d1_v7.yaml        # screen settings and generative specification
+  dev_inputs:
+    outputs/observed_rdn/observed_rdn.json: 2a85edc3fb3cde614f704511ffa097315c0860fe8412c18e829a38a25ca29d75
+    outputs/e5_rdn_specificity/e5_rdn_specificity.json: 05d0acd4f0c68609485ce6cf17b29daecb88f08c09c76e9df5b708dbe3612799
+    outputs/g_guard/g_guard_evaluation.json: c87b5724aa7c044b5f679f6059db0b6265a7163afaaabbe9f18de0a169e3bf0a
+
+test:
+  name: both_margin_conditional_g          # per observed D context: N(., 1) multivariate hypergeometric given both margins
+  alpha_primary: 0.01
+  alpha_reported: [0.05]
+  monte_carlo_draws: 10000
+  monte_carlo_seed: 56604
+
+masks: s3_rule                              # support_contexts_for_deficit, seed key p3v2:{bank_id}:{deficit}:{i}
+
+bank:
+  bank_id: observed_rdn_v2_dev
+  seed: 56601
+  observation_seed: 56602
+  haar_seed: 56603
+  block_count: 512
+  dirichlet_concentration: 8.0
+  minimum_mode_probability: 0.15
+  phase_range: [0.0, 6.283185307179586]
+  families:
+    - tau_flat                              # static history (energy-pinched), uniform clock marginal
+    - tau_flat_readout_0.05                 # static, symmetric readout
+    - nonuniform_clock_static_0.5           # static conditional state, time-diagonal clock with weights (1 + 0.5 cos)/K
+    - tau_flat_clock_skew_0.1               # static, asymmetric product clock readout
+    - tau_flat_xor_0.05                     # static, joint clock-system readout error (outside the product assumption)
+    - pure
+    - dephased_0.5
+    - dephased_0.75
+    - dephased_0.9
+    - dephased_0.95
+    - readout_0.05
+    - pure_clock_skew_0.1
+    - registry_violating
+  null_families: [tau_flat, tau_flat_readout_0.05, nonuniform_clock_static_0.5, tau_flat_clock_skew_0.1]
+  assumption_violating_families: [tau_flat_xor_0.05]
+
+existing_banks:                             # supports regenerated as in the v1 run; joined with the model route
+  e5:
+    artifact: outputs/e5_rdn_specificity/e5_rdn_specificity.json
+    role: e5_support
+  g_guard:
+    artifact: outputs/g_guard/g_guard_evaluation.json
+    config: g_guard.yaml
+    role: g_guard_support
+
+analysis:
+  kappa_bins: [0, 0.25, 0.5, 1, 2, 4, 1000]
+
+endpoints:
+  V1_type_one: {families: null_families, statistic: v2_certification_rate_at_alpha_primary, check: clopper_pearson_95_lower_at_most_alpha}
+  V2_sensitivity: {statistic: v2_certification_rate_per_family_and_stratum}
+  V3_versus_v1: {statistic: paired_decisions_v1_v2}
+  V4_assumption: {families: assumption_violating_families, statistic: v2_certification_rate, expected: above_alpha}
+  V5_versus_model_route: {statistic: joint_table_on_existing_banks}
+
+reserved_future_confirmatory_namespace:
+  seed_range: [53500, 53999]
+
+workers: 6

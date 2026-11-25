@@ -1,0 +1,114 @@
+protocol_version: p3_s3_confirmatory_v1
+role: p3_relational_dynamics_rate_confirmation
+status: preregistered_confirmatory
+coherent_core_gamma: 1.0
+protocol_document: documents/P3-S3-preregistration.md
+output_root: outputs/p3_s3_confirmatory
+# P3 S3 preregistration (user decision 2026-11-21). The declaration of this file freezes S3: the design,
+# the claim, the frozen body calibration it cites, and the statistical protocol v2 at the SHA-256 below.
+# The S3 sealed evaluation bank is the first bank in the reserved namespace 53500-53999. It is built and
+# opened only by the run, after the declaration.
+
+design_source:
+  development_config: p3_d1_v7.yaml                      # estimator, screen and certificate settings must be identical
+  statistical_protocol: p3_statistical_protocol_v2.yaml  # rdn_primary_claim must match primary_claim below
+  statistical_protocol_sha256: d4599175bc79615174031dab1181751313971b5ddb5c4f81d95506c92804a2c3
+  calibration_config: p3_s3_calibration.yaml
+
+ilgc_targets:
+  operational_config: p1_ilgc_operational_r4.yaml
+
+estimator:
+  method: shared_branch_pair_v1
+  starts: 32
+  seed: 0
+  probability_floor: 1.0e-6
+  likelihood_floor: 1.0e-12
+  near_optimal_nats: 1.0
+  max_iterations: 4000
+  pair_observability_threshold: 0.05
+
+screen:
+  method: support_identifiability_screen_v1
+  pauli_commutant: true
+  disconnected_branch_null_tail_epsilon: 1.0e-6
+
+bodies:
+  # The frozen S3 calibration, cited by hash and never recomputed.
+  source_artifact: outputs/p3_s3_calibration/p3_s3_calibration.json
+  source_artifact_sha256: 2144a7c4cb2d321026f05c7a9b29022eb69f2f49e6cd42de22ea46d74e4673fb
+  calibration_hash: c4f61ad444ce3eaeec5bb15382ba171dff9edea94c16770ba3bac7dff4470d7f
+
+certificate:
+  existence: bi_only_with_registry       # BI primal_verified implies Q primal_verified; no selector, no atlas
+  precision_dps: 80
+  proposal_backends: [CLARABEL]
+  rdn_version: rdn_v1
+  rdn_refutation_candidates: [energy_pinched_bi_primal_state, energy_pinched_exact_state]
+  refine_unresolved_with_optimal_classical_state: true   # D1-v7 primary-set rule; S3 has one (primary) body set
+
+primary_claim:                           # copied from p3_statistical_protocol_v2.yaml rdn_primary_claim (checked)
+  family: F_RDN
+  statement: >-
+    Under the declared generative distribution, the RDN certification rate exceeds 0.80 in both the
+    medium and the low stratum.
+  unit: construction_block
+  block_success: bi_primal_verified_and_rdn_certified
+  screened_out_block: abstains_and_counts_as_failure_denominator_keeps_all_blocks
+  denominator: all_evaluation_blocks_of_the_stratum
+  strata: [medium, low]
+  p0: 0.80
+  test: exact_binomial_one_sided
+  one_sided_alpha_per_stratum: 0.05
+  combination: intersection_union
+  family_p_value: max_over_strata
+  blocks_per_stratum: 160
+  pass_count: 137
+  planning_rate: 0.90
+  analysis: single_final_analysis        # no interim looks, no extension, no re-draw
+
+claim_scope:
+  confirmatory_families: [F_RDN]
+  family_alpha: {F_RDN: 0.05}
+  deferred_families:
+    F_frontier: not_tested_in_this_s3_confirm_later_with_its_own_frozen_design
+    F_structural: not_tested_in_this_s3_confirm_later_with_its_own_frozen_design
+  graphical_transitions_recorded_in_statistical_protocol: true   # 0.025 / 0.025 after F_RDN passes; a later preregistration decides whether to use them
+  single_stratum_confirmation: not_claimed
+  model_a_superiority: not_claimed
+  statistical_protocol_open_items:
+    frontier_structural_alpha_and_power: not_applicable_families_deferred
+    exact_bootstrap_enumeration_vs_tango: not_applicable_f_rdn_uses_the_exact_binomial
+    group_sequential_information_fractions: not_applicable_single_final_analysis
+
+report_only:
+  - per-stratum BI terminal counts, RDN status counts, and screened-out counts
+  - kappa distribution (r_diag is the frozen calibration radius)
+  - body coverage of the SBP centre (exact scores) and unobserved-D coefficient recovery
+  - oracle screen audit
+  # difference_vs_model_a is not computed: it needs a Model A training bank; D1-v6 characterized it.
+  # atlas_citable_rate_rdn_given_atlas belongs to P1 sparse atlas A1, a separate experiment.
+
+evaluation_bank:
+  # Sealed. The first bank in the reserved confirmatory namespace.
+  bank_id: p3_s3_evaluation_sealed
+  seed: 53500
+  block_count: 160
+  dirichlet_concentration: 8.0
+  minimum_mode_probability: 0.15
+  phase_range: [0.0, 6.283185307179586]
+  observation_seed: 53600
+deficits: [medium, low]                  # each construction block is observed once per stratum
+
+independence:
+  s3_rdn_confirmation_data: evaluation_bank (sealed; never used for any calibration, threshold or choice)
+  body_calibration_data: p3_s3_calibration_v1 (frozen; cited by hash)
+  atlas_threshold_data: P1 sparse atlas A1 D_atlas_cal (disjoint; checked at declaration)
+  atlas_evaluation_data: P1 sparse atlas A1 D_atlas_eval (disjoint; checked at declaration)
+  outcome_dependence: none               # the A1 outcome cannot change this claim, its rule or its decision
+
+reserved_confirmatory_namespace:
+  seed_range: [53500, 53999]
+  allocated_here: [53500, 53600]
+
+workers: 6

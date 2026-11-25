@@ -1,0 +1,97 @@
+system_qubits: 2
+contexts:
+  input:
+    - {clock: "D", system: "XI"}
+    - {clock: "D", system: "YI"}
+    - {clock: "D", system: "ZI"}
+    - {clock: "D", system: "IX"}
+    - {clock: "D", system: "IY"}
+    - {clock: "D", system: "IZ"}
+    - {clock: "D", system: "XX"}
+    - {clock: "D", system: "YY"}
+    - {clock: "D", system: "ZZ"}
+    - {clock: "D", system: "XZ"}
+    - {clock: "D", system: "ZX"}
+    - {clock: "F", system: "ZI"}
+    - {clock: "F", system: "IZ"}
+    - {clock: "F", system: "XX"}
+    - {clock: "F", system: "YY"}
+    - {clock: "F", system: "ZZ"}
+  compositional_heldout:
+    - {clock: "F", system: "XZ"}
+    - {clock: "F", system: "ZX"}
+  operator_heldout:
+    - {clock: "D", system: "XY"}
+    - {clock: "F", system: "XY"}
+noise:
+  readout_eta: 0.0
+  calibration_gamma: 1.0
+  negative_control_gamma: [0.6, 0.2, 0.0]
+observation_deficit:
+  high:
+    n_shot: 8192
+    cov_diag: 1.0
+    cov_coh: 1.0
+  medium:
+    n_shot: 4096
+    cov_diag: 0.75
+    cov_coh: 0.6
+  low:
+    n_shot: 2048
+    cov_diag: 0.55
+    cov_coh: 0.35
+scale:
+  n_loc: 4
+  h_max: 2
+  local_window: [0, 1, 2, 3, 4]
+  lambda_gap: 0.35
+  path_tie_tolerance: 1.0e-9
+  B_boot: 32
+p1_b:
+  splits:
+    train_indices: [0, 1, 2, 3, 8, 9, 10, 11]
+    calibration_indices: [4, 5, 6, 7]
+    test_indices: [12, 13, 14, 15]
+    train_replicates: 1
+    calibration_replicates: 1
+    test_replicates: 1
+  lcb_alpha: 0.05
+  coverage_floors:
+    cert: 0.25
+    atlas: 0.25
+    choice: 0.25
+  calibration:
+    model_family: bi_qmn_free_table
+    checkpoint_hash: memory_v1
+    quantile_upper: 0.8
+    quantile_lower: 0.2
+    kappa: 1.0
+    p_floor: 0.01
+    exact_records_per_deficit: 1
+  bootstrap:
+    surrogate_replicates: 32
+    exact_validation_replicates: 2
+    agreement_tolerance: 0.25
+    exact_default_replaced_by_surrogate_after_validation: true
+  evaluation:
+    records_per_deficit: 1
+    negative_control_records_per_gamma: 1
+    negative_control_certificate_records_per_gamma: 0
+  confirmatory:
+    test_indices: [16, 17, 18, 19, 20, 21, 22, 23]
+    test_replicates: 1
+    required_deficits: [high, medium]
+    report_only_deficits: [low]
+    negative_control_records_per_cell: 8
+    negative_acceptance_ucb_max: 0.25
+    negative_min_resolved_rate: 1.0
+    worker_count: 10
+    certificate_timeout_seconds: 300.0
+exact_audit:
+  max_instances: 1
+  tie_break: false
+  certificate_thresholds:
+    theta_Q_diag: 1.0e-5
+    theta_Q_coh: 1.0e-5
+    theta_delta_diag: 1.0e-5
+    theta_delta_coh: 1.0e-5
